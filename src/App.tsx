@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, Route, Routes, useNavigate } from 'react-router-dom';
 import { io, type Socket } from 'socket.io-client';
 import Board from './components/Board';
-import { exportFen, exportPgn, getAiMove, getLegalMoves, importFen as importFenState, importPgn as importPgnState } from './lib/chess';
+import { getAiMove, getLegalMoves, importFen as importFenState } from './lib/chess';
 import { useAppStore } from './store/useAppStore';
 import type { Difficulty, RoomSummary } from './types';
 
@@ -46,8 +46,6 @@ const App = () => {
   const [joinPromptOpen, setJoinPromptOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<string[]>([]);
   const [chatText, setChatText] = useState('');
-  const [fenInput, setFenInput] = useState(snapshot.fen);
-  const [pgnInput, setPgnInput] = useState(snapshot.pgn);
   const [aiDifficulty, setAiDifficulty] = useState<Difficulty>('medium');
   const [orientation, setOrientation] = useState<'white' | 'black'>('white');
   const [gameStarted, setGameStarted] = useState(mode !== 'ai');
@@ -62,11 +60,6 @@ const App = () => {
       ? 'Your turn'
       : "Opponent's turn"
     : roomStatusLabel;
-
-  useEffect(() => {
-    setFenInput(snapshot.fen);
-    setPgnInput(snapshot.pgn);
-  }, [snapshot.fen, snapshot.pgn]);
 
   useEffect(() => {
     setGameStarted(mode !== 'ai');
@@ -111,8 +104,8 @@ const App = () => {
 
   const legalMoves = useMemo(() => getLegalMoves(snapshot.fen), [snapshot.fen]);
 
-  const handleMove = (from: string, to: string) => {
-    const move = `${from}${to}`;
+  const handleMove = (from: string, to: string, promotion?: string) => {
+    const move = `${from}${to}${promotion ?? ''}`;
     if (mode === 'online' && playerColor) {
       const currentTurn = useAppStore.getState().snapshot.turn;
       if ((playerColor === 'w' && currentTurn !== 'w') || (playerColor === 'b' && currentTurn !== 'b')) {
@@ -155,19 +148,6 @@ const App = () => {
     setChatText('');
   };
 
-  const handleImportFen = () => {
-    const imported = importFenState(fenInput);
-    if (imported) {
-      useAppStore.setState({ snapshot: imported });
-    }
-  };
-
-  const handleImportPgn = () => {
-    const imported = importPgnState(pgnInput);
-    if (imported) {
-      useAppStore.setState({ snapshot: imported });
-    }
-  };
 
   const panel = (
     <div className="panel" style={{ background: `linear-gradient(145deg, ${theme === 'dark' ? 'rgba(15,23,42,0.9)' : 'rgba(255,255,255,0.75)'}, ${theme === 'dark' ? 'rgba(6,10,21,0.95)' : 'rgba(245,245,255,0.95)'})` }}>
@@ -188,6 +168,24 @@ const App = () => {
         <div className="stat-card">
           <span>Clock</span>
           <strong>{settings.clock === 'unlimited' ? '∞' : settings.clock}</strong>
+        </div>
+      </div>
+      <div className="captured-grid">
+        <div className="stat-card captured-card">
+          <span>White pieces taken</span>
+          <div className="captured-list">
+            {snapshot.capturedWhite.length ? snapshot.capturedWhite.map((piece, index) => (
+              <span key={`white-${index}`} className="captured-piece captured-piece-white">{piece}</span>
+            )) : <span className="captured-empty">None</span>}
+          </div>
+        </div>
+        <div className="stat-card captured-card">
+          <span>Black pieces taken</span>
+          <div className="captured-list">
+            {snapshot.capturedBlack.length ? snapshot.capturedBlack.map((piece, index) => (
+              <span key={`black-${index}`} className="captured-piece captured-piece-black">{piece}</span>
+            )) : <span className="captured-empty">None</span>}
+          </div>
         </div>
       </div>
       <div className="controls-row">
@@ -233,27 +231,8 @@ const App = () => {
         <span>Username</span>
         <input value={settings.username} onChange={(event) => updateSettings({ username: event.target.value })} />
       </label>
-      {mode !== 'ai' || !gameStarted ? (
-        <>
-          <div className="textarea-group">
-            <label className="field">
-              <span>FEN Import</span>
-              <textarea value={fenInput} onChange={(event) => setFenInput(event.target.value)} rows={3} />
-            </label>
-            <button type="button" className="action-btn" onClick={handleImportFen}>Load FEN</button>
-          </div>
-          <div className="textarea-group">
-            <label className="field">
-              <span>PGN Import</span>
-              <textarea value={pgnInput} onChange={(event) => setPgnInput(event.target.value)} rows={3} />
-            </label>
-            <button type="button" className="action-btn" onClick={handleImportPgn}>Load PGN</button>
-          </div>
-        </>
-      ) : null}
       <div className="controls-row">
-        <button type="button" className="action-btn" onClick={() => navigator.clipboard.writeText(exportFen(snapshot))}>Copy FEN</button>
-        <button type="button" className="action-btn" onClick={() => navigator.clipboard.writeText(exportPgn(snapshot))}>Copy PGN</button>
+        <button type="button" className="action-btn" onClick={() => reset()}>Restart</button>
       </div>
     </div>
   );
@@ -262,21 +241,17 @@ const App = () => {
     <div className={`app-shell ${theme}`}>
       <header className="topbar">
         <div>
-          <p className="eyebrow">Grandmaster Arena</p>
-          <h1>Luxury chess for modern players.</h1>
+          <p className="eyebrow">Minimal Chess</p>
+          <h1>Clean board, calm focus.</h1>
         </div>
         <nav className="nav-links">
           <Link to="/">Home</Link>
-          <Link to="/play/local">Local</Link>
-          <Link to="/play/ai">AI</Link>
-          <Link to="/play/online">Online</Link>
-          <Link to="/leaderboard">Leaderboard</Link>
-          <Link to="/profile">Profile</Link>
+          <button type="button" className="ghost-btn nav-play-btn" onClick={() => { setMode('local'); navigate('/play/local'); }}>Play</button>
         </nav>
       </header>
       <AnimatePresence mode="wait">
         <Routes>
-          <Route path="/" element={<motion.main initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} className="hero-grid"><div className="hero-card"><p className="eyebrow">Immersive play</p><h2>Play online, against AI, or in a private local match.</h2><p>Experience polished animations, instant synchronization, and a premium chess interface inspired by the best platforms in the world.</p><div className="controls-row"><button className="action-btn" onClick={() => { setMode('online'); navigate('/play/online'); }}>Play Online</button><button className="action-btn" onClick={() => { setMode('ai'); navigate('/play/ai'); }}>Play vs AI</button><button className="ghost-btn" onClick={() => { setMode('local'); navigate('/play/local'); }}>Local Match</button></div></div><div className="hero-card secondary"><p className="eyebrow">Highlights</p><ul className="feature-list"><li>Drag and click move support</li><li>Legal move highlights and last move markers</li><li>Draw, resign, rematch, and room-based multiplayer</li><li>PGN/FEN import and export</li></ul></div></motion.main>} />
+          <Route path="/" element={<motion.main initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} className="hero-grid"><div className="hero-card hero-main"><p className="eyebrow">Minimal Chess</p><h2>Sharp board. Quiet interface.</h2><p>Every move is clear, every game feels calm, and the interface stays out of the way.</p><div className="controls-row hero-actions"><button className="action-btn" onClick={() => { setMode('local'); navigate('/play/local'); }}>Play Now</button><button className="ghost-btn" onClick={() => { setMode('ai'); navigate('/play/ai'); }}>Challenge AI</button></div></div><div className="hero-card secondary"><p className="eyebrow">Why it works</p><ul className="feature-list minimal-list"><li>Focused board first</li><li>Simple controls, instant play</li><li>Clear capture tracking</li></ul></div></motion.main>} />
           <Route path="/play/local" element={<motion.main initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} className="board-layout"><div className="board-card"><Board fen={snapshot.fen} sideToMove={snapshot.turn} onMove={handleMove} theme={theme} boardTheme={boardTheme} showLegalMoves={settings.showLegalMoves} legalMoves={legalMoves} lastMove={snapshot.lastMove ? { from: snapshot.lastMove.slice(0, 2), to: snapshot.lastMove.slice(2, 4) } : null} orientation={orientation} /></div>{panel}</motion.main>} />
           <Route path="/play/ai" element={<motion.main initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} className="board-layout"><div className="board-card"><Board fen={snapshot.fen} sideToMove={snapshot.turn} onMove={handleMove} theme={theme} boardTheme={boardTheme} showLegalMoves={settings.showLegalMoves} legalMoves={legalMoves} lastMove={snapshot.lastMove ? { from: snapshot.lastMove.slice(0, 2), to: snapshot.lastMove.slice(2, 4) } : null} orientation={orientation} /></div>{panel}</motion.main>} />
           <Route path="/play/online" element={<motion.main initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} className="board-layout"><div className="board-card"><Board fen={snapshot.fen} sideToMove={snapshot.turn} onMove={handleMove} theme={theme} boardTheme={boardTheme} showLegalMoves={settings.showLegalMoves} legalMoves={legalMoves} lastMove={snapshot.lastMove ? { from: snapshot.lastMove.slice(0, 2), to: snapshot.lastMove.slice(2, 4) } : null} orientation={orientation} /></div><div className="panel"><div className="panel-header"><div><p className="eyebrow">Socket room</p><h2>Realtime multiplayer</h2></div><div className="pill">{onlineRoom ? onlineRoom.code : 'offline'}</div></div><div className="room-status-box"><div className="pill">{playerTurnLabel}</div>{playerColor ? <div className="pill accent">{playerColor === 'w' ? 'You are White' : 'You are Black'}</div> : null}</div><div className="room-player-list">{onlineRoom?.players.length ? onlineRoom.players.map((playerName, index) => <div key={`${playerName}-${index}`} className="room-player-item"><span>{playerName}</span><strong>{index === 0 ? 'Host' : 'Opponent'}</strong></div>) : <div className="room-player-item empty"><span>No players yet</span><strong>Waiting</strong></div>}</div><div className="controls-row"><button className="action-btn" onClick={handleCreateRoom}>Create Room</button><button className="ghost-btn" onClick={handleJoinRoom}>Join Room</button></div>{joinPromptOpen ? <div className="room-dialog"><label className="field"><span>Room code</span><input value={roomCode} onChange={(event) => setRoomCode(event.target.value.toUpperCase())} /></label><div className="controls-row"><button className="action-btn" onClick={submitJoinRoom}>Join</button><button className="ghost-btn" onClick={() => setJoinPromptOpen(false)}>Cancel</button></div></div> : <label className="field"><span>Room code</span><input value={roomCode} onChange={(event) => setRoomCode(event.target.value.toUpperCase())} /></label>}<div className="chat-box">{chatMessages.map((message, index) => <div key={index} className="chat-item">{message}</div>)}</div><label className="field"><span>Chat</span><input value={chatText} onChange={(event) => setChatText(event.target.value)} /></label><button className="action-btn" onClick={handleSendChat}>Send</button></div></motion.main>} />

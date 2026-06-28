@@ -29,6 +29,8 @@ export interface GameSnapshot {
   isGameOver: boolean;
   lastMove?: string;
   winner?: 'w' | 'b' | 'draw';
+  capturedWhite: string[];
+  capturedBlack: string[];
 }
 
 export interface RoomSummary {

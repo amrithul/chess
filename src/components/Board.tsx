@@ -81,8 +81,12 @@ const Board = ({ fen, sideToMove, onMove, theme, boardTheme, showLegalMoves, leg
       }
       const from = selectedSquare;
       const to = square;
-      if (legalMoves.includes(`${from}${to}`) || legalMoves.includes(`${from}${to}q`) || legalMoves.includes(`${from}${to}r`) || legalMoves.includes(`${from}${to}b`) || legalMoves.includes(`${from}${to}n`)) {
-        onMove(from, to);
+      const matchingMoves = legalMoves.filter((legalMove) => legalMove.startsWith(`${from}${to}`));
+      if (matchingMoves.length) {
+        const promotionMove = matchingMoves.find((legalMove) => legalMove.length === 5 && legalMove.endsWith('q'))
+          ?? matchingMoves.find((legalMove) => legalMove.length === 5);
+        const promotion = promotionMove?.length === 5 ? promotionMove[4] : undefined;
+        onMove(from, to, promotion);
       } else if (isPieceOwnedByPlayer(piece)) {
         setSelectedSquare(square);
       } else {

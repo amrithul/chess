@@ -19,6 +19,7 @@ export const buildSnapshot = (chess: Chess, override?: Partial<GameSnapshot>): G
   const fen = chess.fen();
   const history = chess.history();
   const status = getStatus(chess);
+  const captured = getCapturedPieces(chess.history({ verbose: true }));
   return {
     fen,
     pgn: chess.pgn(),
@@ -30,6 +31,8 @@ export const buildSnapshot = (chess: Chess, override?: Partial<GameSnapshot>): G
     isGameOver: chess.isGameOver(),
     lastMove: history.at(-1),
     winner: chess.isCheckmate() ? (chess.turn() === 'w' ? 'b' : 'w') : chess.isDraw() ? 'draw' : undefined,
+    capturedWhite: captured.white,
+    capturedBlack: captured.black,
     ...override,
   };
 };
@@ -70,12 +73,8 @@ export const redoMove = (snapshot: GameSnapshot): GameSnapshot => {
 
 export const getLegalMoves = (fen: string): string[] => {
   const chess = new Chess(fen);
-  return chess.moves({ verbose: true }).map((m) => `${m.from}${m.to}`);
+  return chess.moves({ verbose: true }).map((m) => `${m.from}${m.to}${m.promotion ?? ''}`);
 };
-
-export const exportFen = (snapshot: GameSnapshot): string => snapshot.fen;
-
-export const exportPgn = (snapshot: GameSnapshot): string => snapshot.pgn;
 
 export const importFen = (fen: string): GameSnapshot | null => {
   try {
@@ -86,14 +85,20 @@ export const importFen = (fen: string): GameSnapshot | null => {
   }
 };
 
-export const importPgn = (pgn: string): GameSnapshot | null => {
-  try {
-    const chess = new Chess();
-    chess.loadPgn(pgn);
-    return buildSnapshot(chess);
-  } catch {
-    return null;
-  }
+export const getCapturedPieces = (moves: Move[]): { white: string[]; black: string[] } => {
+  const capturedWhite: string[] = [];
+  const capturedBlack: string[] = [];
+
+  moves.forEach((move) => {
+    if (!move.captured) return;
+    if (move.color === 'w') {
+      capturedBlack.push(getPieceSymbol(move.captured));
+    } else {
+      capturedWhite.push(getPieceSymbol(move.captured.toUpperCase()));
+    }
+  });
+
+  return { white: capturedWhite, black: capturedBlack };
 };
 
 export const getPieceSymbol = (piece: string | null): string => {
@@ -137,7 +142,7 @@ export const getAiMove = (fen: string, difficulty: Difficulty): string | null =>
   scoredMoves.sort((a, b) => b.score - a.score);
   const bestMove = scoredMoves[0]?.move;
   if (!bestMove) return null;
-  return `${bestMove.from}${bestMove.to}`;
+  return `${bestMove.from}${bestMove.to}${bestMove.promotion ?? ''}`;
 };
 
 function evaluateBoard(fen: string, side: 'w' | 'b', depth: number): number {
