@@ -16,6 +16,7 @@ interface PanelProps {
   setChatText: (s: string) => void;
   handleSendChat: () => void;
   playerTurnLabel: string;
+  onlineBackendAvailable: boolean;
 }
 
 const Panel: React.FC<PanelProps> = ({
@@ -32,6 +33,7 @@ const Panel: React.FC<PanelProps> = ({
   setChatText,
   handleSendChat,
   playerTurnLabel,
+  onlineBackendAvailable,
 }) => {
   const theme = useAppStore((s) => s.theme);
   const settings = useAppStore((s) => s.settings);
@@ -94,14 +96,20 @@ const Panel: React.FC<PanelProps> = ({
 
       {mode === 'online' && (
         <div style={{ marginTop: 12 }}>
+          {!onlineBackendAvailable && (
+            <div className="pill" style={{ marginBottom: 10, display: 'block', lineHeight: 1.4 }}>
+              Online play needs a separate Socket.IO backend. Set VITE_SOCKET_URL to that service for room creation and chat.
+            </div>
+          )}
+
           <div className="room-status-box">
             <div className="pill accent">{playerTurnLabel}</div>
             <div className="pill">Room: {onlineRoom?.code ?? '—'}</div>
           </div>
 
           <div className="controls-row" style={{ marginTop: 10 }}>
-            <button className="action-btn" onClick={handleCreateRoom}>Create Room</button>
-            <button className="ghost-btn" onClick={() => setJoinPromptOpen(true)}>Join Room</button>
+            <button className="action-btn" onClick={handleCreateRoom} disabled={!onlineBackendAvailable}>Create Room</button>
+            <button className="ghost-btn" onClick={() => setJoinPromptOpen(true)} disabled={!onlineBackendAvailable}>Join Room</button>
           </div>
 
           {joinPromptOpen && (
@@ -110,7 +118,7 @@ const Panel: React.FC<PanelProps> = ({
                 <input value={roomCode} onChange={(e) => setRoomCode(e.target.value)} placeholder="Enter room code" />
               </div>
               <div className="controls-row">
-                <button className="action-btn" onClick={submitJoinRoom}>Join</button>
+                <button className="action-btn" onClick={submitJoinRoom} disabled={!onlineBackendAvailable}>Join</button>
                 <button className="ghost-btn" onClick={() => setJoinPromptOpen(false)}>Cancel</button>
               </div>
             </div>
@@ -127,9 +135,9 @@ const Panel: React.FC<PanelProps> = ({
           </div>
 
           <div style={{ marginTop: 8 }} className="textarea-group">
-            <input value={chatText} onChange={(e) => setChatText(e.target.value)} placeholder="Message" />
+            <input value={chatText} onChange={(e) => setChatText(e.target.value)} placeholder="Message" disabled={!onlineBackendAvailable} />
             <div className="controls-row">
-              <button className="ghost-btn" onClick={handleSendChat}>Send</button>
+              <button className="ghost-btn" onClick={handleSendChat} disabled={!onlineBackendAvailable}>Send</button>
             </div>
           </div>
         </div>

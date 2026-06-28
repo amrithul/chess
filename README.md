@@ -21,3 +21,8 @@ docker compose up --build
 
 ## Environment
 Copy .env.example to .env and customize it.
+
+## Vercel Deployment
+Vercel can host the React frontend, but it cannot run the current Socket.IO server in `server/index.ts` as a long-lived process.
+
+Deploy the frontend to Vercel and host the backend on a persistent Node service elsewhere, then set `VITE_SOCKET_URL` to that backend URL during the Vercel build.
