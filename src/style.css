@@ -308,10 +308,10 @@ button {
   max-width: 1200px;
   padding: 12px;
   border-radius: var(--radius);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  backdrop-filter: blur(18px);
-  box-shadow: var(--shadow);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
   transition: var(--transition);
   display: flex;
   align-items: center;
@@ -581,9 +581,9 @@ button {
 /* ===== Board ===== */
 .board-surface {
   position: relative;
-  padding: 4px;
+  padding: 0;
   border-radius: var(--radius-sm);
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.12);
   max-width: 100%;
   margin: 0 auto;
   width: 100%;
