@@ -1,7 +1,38 @@
 import React from 'react';
 import { useAppStore } from '../store/useAppStore';
+import type { RoomSummary } from '../types';
 
-const Panel: React.FC = () => {
+interface PanelProps {
+  mode: string;
+  roomCode: string;
+  setRoomCode: (s: string) => void;
+  onlineRoom: RoomSummary | null;
+  joinPromptOpen: boolean;
+  setJoinPromptOpen: (b: boolean) => void;
+  handleCreateRoom: () => void;
+  submitJoinRoom: () => void;
+  chatMessages: string[];
+  chatText: string;
+  setChatText: (s: string) => void;
+  handleSendChat: () => void;
+  playerTurnLabel: string;
+}
+
+const Panel: React.FC<PanelProps> = ({
+  mode,
+  roomCode,
+  setRoomCode,
+  onlineRoom,
+  joinPromptOpen,
+  setJoinPromptOpen,
+  handleCreateRoom,
+  submitJoinRoom,
+  chatMessages,
+  chatText,
+  setChatText,
+  handleSendChat,
+  playerTurnLabel,
+}) => {
   const theme = useAppStore((s) => s.theme);
   const settings = useAppStore((s) => s.settings);
   const snapshot = useAppStore((s) => s.snapshot);
@@ -61,7 +92,50 @@ const Panel: React.FC = () => {
         <button className="action-btn" onClick={reset}>⟳ Restart</button>
       </div>
 
-      <details className="settings-details">
+      {mode === 'online' && (
+        <div style={{ marginTop: 12 }}>
+          <div className="room-status-box">
+            <div className="pill accent">{playerTurnLabel}</div>
+            <div className="pill">Room: {onlineRoom?.code ?? '—'}</div>
+          </div>
+
+          <div className="controls-row" style={{ marginTop: 10 }}>
+            <button className="action-btn" onClick={handleCreateRoom}>Create Room</button>
+            <button className="ghost-btn" onClick={() => setJoinPromptOpen(true)}>Join Room</button>
+          </div>
+
+          {joinPromptOpen && (
+            <div style={{ marginTop: 10 }}>
+              <div className="field">
+                <input value={roomCode} onChange={(e) => setRoomCode(e.target.value)} placeholder="Enter room code" />
+              </div>
+              <div className="controls-row">
+                <button className="action-btn" onClick={submitJoinRoom}>Join</button>
+                <button className="ghost-btn" onClick={() => setJoinPromptOpen(false)}>Cancel</button>
+              </div>
+            </div>
+          )}
+
+          <div style={{ marginTop: 12 }} className="room-player-list">
+            {onlineRoom?.players?.map((p, i) => (
+              <div key={i} className={`room-player-item ${!p ? 'empty' : ''}`}><span>{p}</span><span className="player-status">player</span></div>
+            ))}
+          </div>
+
+          <div style={{ marginTop: 12 }} className="chat-box">
+            {chatMessages.map((m, i) => <div key={i} className="chat-item">{m}</div>)}
+          </div>
+
+          <div style={{ marginTop: 8 }} className="textarea-group">
+            <input value={chatText} onChange={(e) => setChatText(e.target.value)} placeholder="Message" />
+            <div className="controls-row">
+              <button className="ghost-btn" onClick={handleSendChat}>Send</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <details className="settings-details" style={{ marginTop: 12 }}>
         <summary>⚙️ Settings</summary>
         <div className="field">
           <label>Board Theme</label>

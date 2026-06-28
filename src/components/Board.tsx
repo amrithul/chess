@@ -175,7 +175,7 @@ const Board = ({
 }: BoardProps) => {
   const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
   const [showCheckAlert, setShowCheckAlert] = useState(false);
-  const [moveHistory, setMoveHistory] = useState<string[]>([]);
+  // history state removed — snapshot drives move list elsewhere
 
   const board = useMemo(() => {
     const rows = fen.split(' ')[0].split('/');
@@ -275,15 +275,7 @@ const Board = ({
     return board[7 - rowIndex]?.[fileIndex] ?? null;
   };
 
-  // Get game status message
-  const getGameStatus = () => {
-    if (isCheckmate) return 'Checkmate!';
-    if (isDraw) return 'Draw';
-    if (isCheckPosition) return 'Check';
-    return null;
-  };
-
-  const gameStatus = getGameStatus();
+  // game status strings are derived from flags directly where needed
 
   return (
     <div className={`board-surface ${theme}`}>
